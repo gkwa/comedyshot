@@ -1,0 +1,105 @@
+image: Ubuntu
+build: off
+
+environment:
+  # enable taylor to ssh to appveyor vm
+  APPVEYOR_SSH_KEY: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFp48yQviDu3U2mGdwv7CO3O84IAj4LJUXzyGbs6mT0q taylor
+
+init:
+- sh: curl -sflL https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-ssh.sh | bash -e -
+on_failure:
+- echo Sleeping to allow debug
+- sleep 60m
+
+install:
+- sudo apt-get -y install lxc debootstrap squashfs-tools awscli >/dev/null
+- sudo snap install distrobuilder --classic >/dev/null
+
+# deploy creds to host:
+- aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+- aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+- echo quick check to ensure I can access bucket
+- mkdir -p /tmp/s3/$APPVEYOR_REPO_COMMIT_TIMESTAMP
+- date >/tmp/s3/$APPVEYOR_REPO_COMMIT_TIMESTAMP/date.txt
+    && aws s3 cp /tmp/s3/$APPVEYOR_REPO_COMMIT_TIMESTAMP/date.txt s3://streambox-comedyshot
+
+# use ubuntu.yaml with distrobuilder to create image and start container custuomized for sls:
+- sudo distrobuilder build-lxd ubuntu.yaml -o image.architecture=amd64 -o image.release=focal
+- mkdir -p /tmp/s3/$APPVEYOR_REPO_COMMIT_TIMESTAMP
+- cp lxd.tar.xz rootfs.squashfs /tmp/s3/$APPVEYOR_REPO_COMMIT_TIMESTAMP
+- du -shc lxd.tar.xz rootfs.squashfs
+- lxd init --auto
+- lxc image import lxd.tar.xz rootfs.squashfs --alias local-image-sls
+- lxc image list
+- time lxc launch local-image-sls csls
+- lxc exec csls -- bash -c 'echo waiting for newtork; until ping -c 1 google.com &>/dev/null; do sleep 1; done'
+- lxc list
+
+# container creds:
+- lxc exec csls -- aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+- lxc exec csls -- aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+
+- lxc exec csls -- mkdir -p /opt/data/sls/
+- lxc file push awsfile.yaml csls/opt/data/sls/
+- lxc file push authorized_keys.yaml csls/opt/data/sls/
+
+# install php composer:
+- lxc file push install_composer.sh csls/usr/local/bin/
+- lxc exec csls -- /usr/local/bin/install_composer.sh >/dev/null
+
+- lxc file push install_node_exporter.sh csls/usr/local/bin/
+- lxc exec csls -- /usr/local/bin/install_node_exporter.sh >/dev/null
+
+# deploy lsweb code to container:
+- lxc file push creds.sh csls/usr/local/bin/
+- lxc exec csls -- /usr/local/bin/creds.sh
+- lxc exec csls -- ssh -o StrictHostKeyChecking=no -T git@gitlab.com
+- lxc exec csls -- bash -c 'mkdir -p /opt/data/lsweb && cd $_ && git init && git remote add origin git@gitlab.com:streambox/lsweb.git'
+- lxc exec csls -- bash -c 'cd /opt/data/lsweb && git fetch --quiet'
+
+# install sls:
+- lxc file push install_sls.sh csls/usr/local/bin/
+- lxc exec csls -- /usr/local/bin/install_sls.sh
+
+# deploy test script:
+- lxc file push test.py csls/usr/local/bin/
+
+- lxc snapshot csls sls-snapshot-${APPVEYOR_REPO_COMMIT_TIMESTAMP}
+- lxc list
+- lxc info csls
+- lxc exec csls -- bash -c 'echo waiting for newtork; until ping -c 1 google.com &>/dev/null; do sleep 1; done'
+
+# create image from container and upload to s3:
+- lxc exec csls updatedb
+- lxc publish csls/sls-snapshot-${APPVEYOR_REPO_COMMIT_TIMESTAMP} --alias local-image-sls description="SLS application"
+- lxc image export local-image-sls /tmp/s3/$APPVEYOR_REPO_COMMIT_TIMESTAMP/
+- du -shc /tmp/s3/*/*
+- aws s3 sync --no-progress /tmp/s3 s3://streambox-comedyshot
+- lxc delete --force csls
+- lxc image delete local-image-sls
+
+# load exported image for test
+- lxc image import $(ls /tmp/s3/$APPVEYOR_REPO_COMMIT_TIMESTAMP/*.tar.gz)  --alias my-csls-export
+- lxc init my-csls-export csls
+- lxc start csls
+
+# open ports to container:
+- lxc config device add csls myport22 proxy listen=tcp:0.0.0.0:2222 connect=tcp:127.0.0.1:22
+- lxc config device add csls myport80 proxy listen=tcp:0.0.0.0:80 connect=tcp:127.0.0.1:80
+- lxc config device add csls myport443 proxy listen=tcp:0.0.0.0:443 connect=tcp:127.0.0.1:443
+
+test_script:
+- lxc exec csls -- pytest --verbose --tb=short /usr/local/bin/test.py
+
+# udp fails on appveyor instance
+# - lxc config device add csls myport1770 proxy listen=udp:0.0.0.0:1770 connect=udp:127.0.0.1:1770
+# - lxc config device add csls myport1771 proxy listen=udp:0.0.0.0:1771 connect=udp:127.0.0.1:1771
+# - lxc config device add csls myport1772 proxy listen=udp:0.0.0.0:1772 connect=udp:127.0.0.1:1772
+# - lxc config device add csls myport1773 proxy listen=udp:0.0.0.0:1773 connect=udp:127.0.0.1:1773
+# - lxc config device add csls myport1774 proxy listen=udp:0.0.0.0:1774 connect=udp:127.0.0.1:1774
+# - lxc config device add csls myport1775 proxy listen=udp:0.0.0.0:1775 connect=udp:127.0.0.1:1775
+# - lxc config device add csls myport1776 proxy listen=udp:0.0.0.0:1776 connect=udp:127.0.0.1:1776
+# - lxc config device add csls myport1777 proxy listen=udp:0.0.0.0:1777 connect=udp:127.0.0.1:1777
+# - lxc config device add csls myport1778 proxy listen=udp:0.0.0.0:1778 connect=udp:127.0.0.1:1778
+# - lxc config device add csls myport1779 proxy listen=udp:0.0.0.0:1779 connect=udp:127.0.0.1:1779
+# - lxc config device add csls myport1900 proxy listen=udp:0.0.0.0:1900 connect=udp:127.0.0.1:1900

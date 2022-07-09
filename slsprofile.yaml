@@ -1,0 +1,57 @@
+devices:
+  myport22:
+    connect: tcp:127.0.0.1:22
+    listen: tcp:0.0.0.0:2222
+    type: proxy
+  myport80:
+    connect: tcp:127.0.0.1:80
+    listen: tcp:0.0.0.0:80
+    type: proxy
+  myport443:
+    connect: tcp:127.0.0.1:443
+    listen: tcp:0.0.0.0:443
+    type: proxy
+  myport1770:
+    connect: udp:127.0.0.1:1770
+    listen: udp:0.0.0.0:1770
+    type: proxy
+  myport1771:
+    connect: udp:127.0.0.1:1771
+    listen: udp:0.0.0.0:1771
+    type: proxy
+  myport1772:
+    connect: udp:127.0.0.1:1772
+    listen: udp:0.0.0.0:1772
+    type: proxy
+  myport1773:
+    connect: udp:127.0.0.1:1773
+    listen: udp:0.0.0.0:1773
+    type: proxy
+  myport1774:
+    connect: udp:127.0.0.1:1774
+    listen: udp:0.0.0.0:1774
+    type: proxy
+  myport1775:
+    connect: udp:127.0.0.1:1775
+    listen: udp:0.0.0.0:1775
+    type: proxy
+  myport1776:
+    connect: udp:127.0.0.1:1776
+    listen: udp:0.0.0.0:1776
+    type: proxy
+  myport1777:
+    connect: udp:127.0.0.1:1777
+    listen: udp:0.0.0.0:1777
+    type: proxy
+  myport1778:
+    connect: udp:127.0.0.1:1778
+    listen: udp:0.0.0.0:1778
+    type: proxy
+  myport1779:
+    connect: udp:127.0.0.1:1779
+    listen: udp:0.0.0.0:1779
+    type: proxy
+  myport1900:
+    connect: udp:127.0.0.1:1900
+    listen: udp:0.0.0.0:1900
+    type: proxy

@@ -1,0 +1,13 @@
+# https://github.com/salesforce/policy_sentry#policy-sentry
+
+mode: crud
+name: sls_comedyshot_deploy
+read:
+- arn:aws:s3:::streambox-comedyshot
+- arn:aws:s3:::streambox-comedyshot/*
+write:
+- arn:aws:s3:::streambox-comedyshot
+- arn:aws:s3:::streambox-comedyshot/*
+list:
+- arn:aws:s3:::streambox-comedyshot
+- arn:aws:s3:::streambox-comedyshot/*
