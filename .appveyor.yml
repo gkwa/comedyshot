@@ -27,7 +27,6 @@ install:
 - sudo distrobuilder build-lxd ubuntu.yaml -o image.architecture=amd64 -o image.release=focal
 - mkdir -p /tmp/s3/$APPVEYOR_REPO_COMMIT_TIMESTAMP
 - cp lxd.tar.xz rootfs.squashfs /tmp/s3/$APPVEYOR_REPO_COMMIT_TIMESTAMP
-- du -shc lxd.tar.xz rootfs.squashfs
 - lxd init --auto
 - lxc image import lxd.tar.xz rootfs.squashfs --alias local-image-sls
 - lxc image list
