@@ -19,6 +19,7 @@ ssh root@tl5 -p 22
 # delete container
 # create new container with name csls from image isls
 # and list running containers:
+lxd init --auto
 lxc delete --force csls
 lxc launch isls csls
 lxc ls
