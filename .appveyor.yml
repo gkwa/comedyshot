@@ -12,6 +12,7 @@ on_failure:
 - sleep 60m
 
 install:
+- sudo apt-get update >/dev/null
 - sudo apt-get -y install lxc debootstrap squashfs-tools awscli >/dev/null
 - sudo snap install distrobuilder --classic >/dev/null
 
