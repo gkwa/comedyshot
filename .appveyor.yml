@@ -32,7 +32,7 @@ install:
 - lxc image import lxd.tar.xz rootfs.squashfs --alias local-image-sls
 - lxc image list
 - time lxc launch local-image-sls csls
-- lxc exec csls -- bash -c 'echo waiting for newtork; until ping -c 1 google.com &>/dev/null; do sleep 1; done'
+- lxc exec csls -- timeout 2m bash -c 'echo waiting for newtork; until ping -c 1 google.com &>/dev/null; do sleep 1; done'
 - lxc list
 
 # container creds:
