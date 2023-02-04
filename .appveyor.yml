@@ -67,7 +67,7 @@ install:
 - lxc snapshot csls sls-snapshot-${APPVEYOR_REPO_COMMIT_TIMESTAMP}
 - lxc list
 - lxc info csls
-- lxc exec csls -- bash -c 'echo waiting for newtork; until ping -c 1 google.com &>/dev/null; do sleep 1; done'
+- lxc exec csls -- timeout 2m bash -c 'echo waiting for newtork; until ping -c 1 google.com &>/dev/null; do sleep 1; done'
 
 # create image from container and upload to s3:
 - lxc exec csls updatedb
